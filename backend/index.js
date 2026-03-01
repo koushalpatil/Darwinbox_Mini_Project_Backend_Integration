@@ -1,7 +1,6 @@
 require("dotenv").config();
 
 const path = require("path");
-const { Worker } = require("worker_threads");
 const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
@@ -13,6 +12,7 @@ const {
   DeleteObjectCommand,
 } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
+const WorkerPool = require("./workers/WorkerPool");
 
 const PORT = process.env.PORT || 5000;
 const BUCKET = process.env.S3_BUCKET_NAME;
@@ -149,35 +149,22 @@ app.delete(/^\/api\/pdf\/(.+)/, async (req, res) => {
   }
 });
 
-function runExtractWorker(pdfBuffer) {
-  return new Promise((resolve, reject) => {
-    const worker = new Worker(
-      path.join(__dirname, "workers", "pdfExtractWorker.js"),
-    );
+const POOL_SIZE = 2;
 
-    const timeout = setTimeout(() => {
-      worker.terminate();
-      reject(new Error("Worker timed out after 30s"));
-    }, 30_000);
+const fieldPool = new WorkerPool(
+  path.join(__dirname, "workers", "fieldExtractWorker.js"),
+  POOL_SIZE,
+);
 
-    worker.on("message", (result) => {
-      clearTimeout(timeout);
-      worker.terminate();
-      if (result.error) {
-        reject(new Error(result.error));
-      } else {
-        resolve(result);
-      }
-    });
+const jsPool = new WorkerPool(
+  path.join(__dirname, "workers", "jsExtractWorker.js"),
+  POOL_SIZE,
+);
 
-    worker.on("error", (err) => {
-      clearTimeout(timeout);
-      reject(err);
-    });
-
-    worker.postMessage({ pdfBuffer });
-  });
-}
+const cleanPool = new WorkerPool(
+  path.join(__dirname, "workers", "pdfCleanWorker.js"),
+  POOL_SIZE,
+);
 
 app.post("/api/extract", async (req, res) => {
   try {
@@ -195,19 +182,26 @@ app.post("/api/extract", async (req, res) => {
     }
     const pdfBuffer = Buffer.concat(chunks);
 
+    const sizeKB = (pdfBuffer.length / 1024).toFixed(1);
     console.log(
-      `Extracting fields from s3://${BUCKET}/${key} (${(pdfBuffer.length / 1024).toFixed(1)} KB)`,
+      `Extracting from s3://${BUCKET}/${key} (${sizeKB} KB) using 3 parallel workers`,
     );
 
-    const result = await runExtractWorker(pdfBuffer);
+    const taskData = { pdfBuffer };
 
-    console.log(`Extracted ${result.fields.length} fields from "${key}"`);
+    const [fieldResult, jsResult, cleanResult] = await Promise.all([
+      fieldPool.runTask(taskData),
+      jsPool.runTask(taskData),
+      cleanPool.runTask(taskData),
+    ]);
+
+    console.log(`Extracted ${fieldResult.fields.length} fields from "${key}"`);
 
     res.json({
       success: true,
-      fields: result.fields,
-      documentJS: result.documentJS,
-      cleanedPdfBase64: result.cleanedPdfBase64,
+      fields: fieldResult.fields,
+      documentJS: jsResult.documentJS,
+      cleanedPdfBase64: cleanResult.cleanedPdfBase64,
     });
   } catch (err) {
     console.error("Extract error:", err);
