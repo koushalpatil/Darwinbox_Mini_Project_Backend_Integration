@@ -1,11 +1,11 @@
-import {
+const {
   extractAllJSActions,
   scanDictForJS,
   mergeJSActions,
   createEmptyActions,
-} from "../js-actions";
+} = require("../js-actions");
 
-export function extractFormatFromJS(js) {
+function extractFormatFromJS(js) {
   if (!js) return {};
 
   const dateMatch = js.match(
@@ -31,7 +31,7 @@ export function extractFormatFromJS(js) {
   return {};
 }
 
-export function classifyTextField(field) {
+function classifyTextField(field) {
   let allActions = createEmptyActions();
   try {
     const rawDict = field.acroField.dict;
@@ -41,7 +41,6 @@ export function classifyTextField(field) {
     allActions = mergeJSActions(allActions, fieldActions);
 
     const fieldJS = scanDictForJS(rawDict, context);
-    console.log("JS ATTACHED TO THE FIELD  : ", fieldJS);
 
     if (fieldJS) {
       const result = extractFormatFromJS(fieldJS);
@@ -57,7 +56,6 @@ export function classifyTextField(field) {
 
       const widgetJS = scanDictForJS(widget.dict, context);
       if (widgetJS) {
-        console.log("JS ATTACHED TO WIDGET : ", widgetJS);
         const result = extractFormatFromJS(widgetJS);
         if (result.subType) {
           return { ...result, jsActions: allActions };
@@ -70,7 +68,7 @@ export function classifyTextField(field) {
   return { subType: "text", jsActions: allActions };
 }
 
-export function extractFieldJSActions(field) {
+function extractFieldJSActions(field) {
   let allActions = createEmptyActions();
   try {
     const rawDict = field.acroField.dict;
@@ -92,3 +90,9 @@ export function extractFieldJSActions(field) {
   }
   return allActions;
 }
+
+module.exports = {
+  extractFormatFromJS,
+  classifyTextField,
+  extractFieldJSActions,
+};

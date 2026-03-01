@@ -1,6 +1,6 @@
-import { PDFName, PDFArray } from "pdf-lib";
-import { resolveLookup } from "./helpers";
-import { extractJSFromAction, extractAllJSActions } from "./extractors";
+const { PDFName, PDFArray } = require("pdf-lib");
+const { resolveLookup } = require("./helpers");
+const { extractJSFromAction, extractAllJSActions } = require("./extractors");
 
 function walkNameTree(node, context) {
   const results = [];
@@ -59,7 +59,7 @@ function walkNameTree(node, context) {
   return results;
 }
 
-export function extractDocumentLevelJS(pdfDoc) {
+function extractDocumentLevelJS(pdfDoc) {
   const results = [];
   try {
     const context = pdfDoc.context;
@@ -85,7 +85,7 @@ export function extractDocumentLevelJS(pdfDoc) {
   return results;
 }
 
-export function extractPageLevelJS(pdfDoc) {
+function extractPageLevelJS(pdfDoc) {
   const results = [];
   try {
     const context = pdfDoc.context;
@@ -121,7 +121,7 @@ export function extractPageLevelJS(pdfDoc) {
   return results;
 }
 
-export function extractOpenActionJS(pdfDoc) {
+function extractOpenActionJS(pdfDoc) {
   const results = [];
   try {
     const context = pdfDoc.context;
@@ -133,22 +133,11 @@ export function extractOpenActionJS(pdfDoc) {
       context,
     );
     if (!openAction) return results;
-
     if (openAction instanceof PDFArray) return results;
 
     const jsArr = extractJSFromAction(openAction, context);
     for (const js of jsArr) {
       results.push({ location: "OpenAction", js });
-    }
-
-    if (typeof openAction.get === "function") {
-      const sEntry = openAction.get(PDFName.of("S"));
-      if (sEntry) {
-        const sName =
-          sEntry instanceof PDFName ? sEntry.decodeText() : String(sEntry);
-        if (sName !== "JavaScript") {
-        }
-      }
     }
   } catch (e) {
     console.debug("extractOpenActionJS failed:", e);
@@ -156,7 +145,7 @@ export function extractOpenActionJS(pdfDoc) {
   return results;
 }
 
-export function extractCalculationOrderJS(pdfDoc) {
+function extractCalculationOrderJS(pdfDoc) {
   const results = [];
   try {
     const context = pdfDoc.context;
@@ -214,3 +203,10 @@ export function extractCalculationOrderJS(pdfDoc) {
   }
   return results;
 }
+
+module.exports = {
+  extractDocumentLevelJS,
+  extractPageLevelJS,
+  extractOpenActionJS,
+  extractCalculationOrderJS,
+};

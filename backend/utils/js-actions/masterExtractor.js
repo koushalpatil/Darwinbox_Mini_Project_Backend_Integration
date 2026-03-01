@@ -1,14 +1,12 @@
-import { extractAllJSActions } from "./extractors";
-import {
+const { extractAllJSActions } = require("./extractors");
+const {
   extractDocumentLevelJS,
   extractPageLevelJS,
   extractOpenActionJS,
   extractCalculationOrderJS,
-} from "./documentExtractors";
+} = require("./documentExtractors");
 
-export function extractAllDocumentJS(pdfDoc) {
-  console.group("[JS Extracting from full document");
-
+function extractAllDocumentJS(pdfDoc) {
   const documentLevel = extractDocumentLevelJS(pdfDoc);
   const pageLevel = extractPageLevelJS(pdfDoc);
   const openAction = extractOpenActionJS(pdfDoc);
@@ -56,7 +54,7 @@ export function extractAllDocumentJS(pdfDoc) {
     console.debug("Field/Widget level scan failed:", e);
   }
 
-  const summary = {
+  return {
     documentLevel,
     pageLevel,
     openAction,
@@ -64,27 +62,6 @@ export function extractAllDocumentJS(pdfDoc) {
     fieldLevel,
     widgetLevel,
   };
-
-  console.log("\n[JS Extract] ── Summary ──");
-  console.log(
-    `  Document Level (/Names → JavaScript) : ${documentLevel.length} scripts`,
-  );
-  console.log(
-    `  Page Level (/AA in pages)             : ${pageLevel.length} actions`,
-  );
-  console.log(
-    `  Document Open (/OpenAction)           : ${openAction.length} actions`,
-  );
-  console.log(
-    `  Calculation Order (/AcroForm → CO)    : ${calculationOrder.length} fields`,
-  );
-  console.log(
-    `  Field Level (/AA in field dicts)       : ${fieldLevel.length} fields`,
-  );
-  console.log(
-    `  Widget Level (/AA in widget dicts)     : ${widgetLevel.length} widgets`,
-  );
-  console.groupEnd();
-
-  return summary;
 }
+
+module.exports = { extractAllDocumentJS };

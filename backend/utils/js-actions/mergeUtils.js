@@ -1,5 +1,5 @@
-import { KNOWN_ACTION_KEYS, createEmptyActions } from "./helpers";
-import { extractAllJSActions } from "./extractors";
+const { KNOWN_ACTION_KEYS, createEmptyActions } = require("./helpers");
+const { extractAllJSActions } = require("./extractors");
 
 function normalizeToArray(val) {
   if (!val) return [];
@@ -8,7 +8,7 @@ function normalizeToArray(val) {
   return [];
 }
 
-export function scanDictForJS(dict, context) {
+function scanDictForJS(dict, context) {
   const actions = extractAllJSActions(dict, context);
   for (const key of [...KNOWN_ACTION_KEYS, "A"]) {
     const arr = actions[key];
@@ -22,7 +22,7 @@ export function scanDictForJS(dict, context) {
   return "";
 }
 
-export function mergeJSActions(base, overlay) {
+function mergeJSActions(base, overlay) {
   const merged = createEmptyActions();
   const allKeys = new Set([...Object.keys(base), ...Object.keys(overlay)]);
 
@@ -41,3 +41,5 @@ export function mergeJSActions(base, overlay) {
 
   return merged;
 }
+
+module.exports = { scanDictForJS, mergeJSActions };

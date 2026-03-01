@@ -1,8 +1,6 @@
-import { PDFDocument } from "pdf-lib";
 import { useState } from "react";
-import { extractFieldsFromDocument } from "../utils/pdf/fieldExtractor";
-import { createCleanedPdf } from "../utils/pdf/pdfCleaner";
-import { extractAllDocumentJS } from "../utils/js-actions";
+
+const API_BASE = "/api";
 
 export const usePDFExtract = () => {
   const [isExtracting, setIsExtracting] = useState(false);
@@ -16,24 +14,38 @@ export const usePDFExtract = () => {
       setIsExtracting(true);
       setError(null);
 
-      const pdfDoc = await PDFDocument.load(file.arrayBuffer.slice(0));
+      const res = await fetch(`${API_BASE}/extract`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: file.s3Key }),
+      });
 
-      const allJS = extractAllDocumentJS(pdfDoc);
-      setDocumentJS(allJS);
-      console.log("Full document JS extraction result:", allJS);
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error(errBody.error || `Extraction failed (${res.status})`);
+      }
 
-      const extractedFields = extractFieldsFromDocument(pdfDoc);
-      setFields(extractedFields);
-      console.log("Extracted fillable fields:", extractedFields);
+      const data = await res.json();
 
-      const cleanedBuffer = await createCleanedPdf(file.arrayBuffer);
-      setCleanedPdfBuffer(cleanedBuffer);
+      setFields(data.fields);
+      setDocumentJS(data.documentJS);
+      console.log("Extracted fields from backend:", data.fields.length);
+      console.log("Document JS:", data.documentJS);
 
-      console.log(
-        "Created cleaned PDF buffer (values removed, annotations preserved)",
-      );
+      // Convert base64 cleaned PDF back to ArrayBuffer
+      if (data.cleanedPdfBase64) {
+        const binaryStr = atob(data.cleanedPdfBase64);
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) {
+          bytes[i] = binaryStr.charCodeAt(i);
+        }
+        setCleanedPdfBuffer(bytes.buffer);
+        console.log(
+          "Received cleaned PDF from backend (values cleared, annotations preserved)",
+        );
+      }
 
-      return extractedFields;
+      return data.fields;
     } catch (err) {
       console.error(err);
       setError("Failed to extract fillable fields from PDF");

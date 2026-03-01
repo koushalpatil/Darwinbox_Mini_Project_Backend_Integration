@@ -1,12 +1,15 @@
-import { PDFName, PDFNumber } from "pdf-lib";
-import { classifyTextField, extractFieldJSActions } from "./fieldClassifier";
-import {
+const { PDFName, PDFNumber } = require("pdf-lib");
+const {
+  classifyTextField,
+  extractFieldJSActions,
+} = require("./fieldClassifier");
+const {
   mergeJSActions,
   extractCalculationOrderJS,
   createEmptyActions,
-} from "../js-actions";
+} = require("../js-actions");
 
-export function buildAnnotPageMap(pdfDoc) {
+function buildAnnotPageMap(pdfDoc) {
   const pages = pdfDoc.getPages();
   const annotDictToPageIndex = new Map();
 
@@ -115,7 +118,7 @@ function extractTypeSpecificData(field, fieldType, widgetIdx) {
   return data;
 }
 
-export function extractFieldsFromDocument(pdfDoc) {
+function extractFieldsFromDocument(pdfDoc) {
   const form = pdfDoc.getForm();
   const annotDictToPageIndex = buildAnnotPageMap(pdfDoc);
   const coActionsMap = buildCOActionsMap(pdfDoc);
@@ -152,15 +155,6 @@ export function extractFieldsFromDocument(pdfDoc) {
         const coActions = coActionsMap.get(fieldName);
         const existingActions = typeData.jsActions || createEmptyActions();
         typeData.jsActions = mergeJSActions(existingActions, coActions);
-
-        console.log(
-          `[JS Extract]  CO merge  |  field: "${fieldName}"  |  merged keys: ${Object.entries(
-            typeData.jsActions,
-          )
-            .filter(([, v]) => (Array.isArray(v) ? v.length > 0 : !!v))
-            .map(([k]) => k)
-            .join(", ")}`,
-        );
       }
 
       const fieldData = {
@@ -203,3 +197,5 @@ function promoteCheckboxGroupsToRadio(fields) {
     return f;
   });
 }
+
+module.exports = { buildAnnotPageMap, extractFieldsFromDocument };

@@ -1,5 +1,7 @@
 require("dotenv").config();
 
+const path = require("path");
+const { Worker } = require("worker_threads");
 const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
@@ -144,6 +146,72 @@ app.delete(/^\/api\/pdf\/(.+)/, async (req, res) => {
   } catch (err) {
     console.error("Delete error:", err);
     res.status(500).json({ error: "Failed to delete file from S3" });
+  }
+});
+
+function runExtractWorker(pdfBuffer) {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(
+      path.join(__dirname, "workers", "pdfExtractWorker.js"),
+    );
+
+    const timeout = setTimeout(() => {
+      worker.terminate();
+      reject(new Error("Worker timed out after 30s"));
+    }, 30_000);
+
+    worker.on("message", (result) => {
+      clearTimeout(timeout);
+      worker.terminate();
+      if (result.error) {
+        reject(new Error(result.error));
+      } else {
+        resolve(result);
+      }
+    });
+
+    worker.on("error", (err) => {
+      clearTimeout(timeout);
+      reject(err);
+    });
+
+    worker.postMessage({ pdfBuffer });
+  });
+}
+
+app.post("/api/extract", async (req, res) => {
+  try {
+    const { key } = req.body;
+    if (!key) {
+      return res.status(400).json({ error: "Missing 'key' in request body" });
+    }
+
+    const getCommand = new GetObjectCommand({ Bucket: BUCKET, Key: key });
+    const s3Response = await s3.send(getCommand);
+
+    const chunks = [];
+    for await (const chunk of s3Response.Body) {
+      chunks.push(chunk);
+    }
+    const pdfBuffer = Buffer.concat(chunks);
+
+    console.log(
+      `Extracting fields from s3://${BUCKET}/${key} (${(pdfBuffer.length / 1024).toFixed(1)} KB)`,
+    );
+
+    const result = await runExtractWorker(pdfBuffer);
+
+    console.log(`Extracted ${result.fields.length} fields from "${key}"`);
+
+    res.json({
+      success: true,
+      fields: result.fields,
+      documentJS: result.documentJS,
+      cleanedPdfBase64: result.cleanedPdfBase64,
+    });
+  } catch (err) {
+    console.error("Extract error:", err);
+    res.status(500).json({ error: err.message || "Failed to extract fields" });
   }
 });
 

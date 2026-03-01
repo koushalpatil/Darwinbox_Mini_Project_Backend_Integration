@@ -1,19 +1,8 @@
-import { PDFName, PDFDict } from "pdf-lib";
+const { PDFName, PDFDict } = require("pdf-lib");
 
-export const KNOWN_ACTION_KEYS = [
-  "K",
-  "F",
-  "V",
-  "C",
-  "E",
-  "X",
-  "D",
-  "U",
-  "Fo",
-  "Bl",
-];
+const KNOWN_ACTION_KEYS = ["K", "F", "V", "C", "E", "X", "D", "U", "Fo", "Bl"];
 
-export function createEmptyActions() {
+function createEmptyActions() {
   const actions = {};
   for (const key of KNOWN_ACTION_KEYS) {
     actions[key] = [];
@@ -23,7 +12,7 @@ export function createEmptyActions() {
   return actions;
 }
 
-export function resolveLookup(obj, context) {
+function resolveLookup(obj, context) {
   if (!obj) return null;
   if (obj instanceof PDFDict) return obj;
   if (context) {
@@ -35,3 +24,5 @@ export function resolveLookup(obj, context) {
   }
   return null;
 }
+
+module.exports = { KNOWN_ACTION_KEYS, createEmptyActions, resolveLookup };

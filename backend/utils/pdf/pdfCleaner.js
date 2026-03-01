@@ -1,7 +1,7 @@
-import { PDFDocument } from "pdf-lib";
+const { PDFDocument } = require("pdf-lib");
 
-export async function createCleanedPdf(arrayBuffer) {
-  const cleanPdfDoc = await PDFDocument.load(arrayBuffer.slice(0));
+async function createCleanedPdf(arrayBuffer) {
+  const cleanPdfDoc = await PDFDocument.load(Buffer.from(arrayBuffer));
   const cleanForm = cleanPdfDoc.getForm();
 
   cleanForm.getFields().forEach((field) => {
@@ -31,5 +31,7 @@ export async function createCleanedPdf(arrayBuffer) {
   });
 
   const cleanedBytes = await cleanPdfDoc.save();
-  return cleanedBytes.buffer;
+  return Buffer.from(cleanedBytes);
 }
+
+module.exports = { createCleanedPdf };

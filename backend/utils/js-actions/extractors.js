@@ -1,9 +1,9 @@
-import { PDFName, PDFStream, PDFArray } from "pdf-lib";
-import {
+const { PDFName, PDFStream, PDFArray } = require("pdf-lib");
+const {
   resolveLookup,
   KNOWN_ACTION_KEYS,
   createEmptyActions,
-} from "./helpers";
+} = require("./helpers");
 
 function extractJSSingle(actionObj, context) {
   if (!actionObj) return "";
@@ -31,7 +31,7 @@ function extractJSSingle(actionObj, context) {
   }
 }
 
-export function extractJSFromAction(actionObj, context) {
+function extractJSFromAction(actionObj, context) {
   const results = [];
   if (!actionObj) return results;
 
@@ -59,7 +59,7 @@ export function extractJSFromAction(actionObj, context) {
   return results;
 }
 
-export function extractAllJSActions(dict, context) {
+function extractAllJSActions(dict, context) {
   const actions = createEmptyActions();
   if (!dict || typeof dict.get !== "function") return actions;
 
@@ -101,3 +101,5 @@ export function extractAllJSActions(dict, context) {
 
   return actions;
 }
+
+module.exports = { extractJSFromAction, extractAllJSActions };
