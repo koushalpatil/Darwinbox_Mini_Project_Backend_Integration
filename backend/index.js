@@ -166,48 +166,48 @@ const cleanPool = new WorkerPool(
   POOL_SIZE,
 );
 
-app.post("/api/extract", async (req, res) => {
-  try {
-    const { key } = req.body;
-    if (!key) {
-      return res.status(400).json({ error: "Missing 'key' in request body" });
+app.post(
+  "/api/extract",
+  express.raw({ type: "application/octet-stream", limit: "10mb" }),
+  async (req, res) => {
+    try {
+      const pdfBuffer = req.body;
+
+      if (!Buffer.isBuffer(pdfBuffer) || pdfBuffer.length === 0) {
+        return res
+          .status(400)
+          .json({ error: "Missing PDF binary in request body" });
+      }
+
+      const sizeKB = (pdfBuffer.length / 1024).toFixed(1);
+      console.log(
+        `Extracting from uploaded buffer (${sizeKB} KB) using 3 parallel workers`,
+      );
+
+      const taskData = { pdfBuffer };
+
+      const [fieldResult, jsResult, cleanResult] = await Promise.all([
+        fieldPool.runTask(taskData),
+        jsPool.runTask(taskData),
+        cleanPool.runTask(taskData),
+      ]);
+
+      console.log(`Extracted ${fieldResult.fields.length} fields`);
+
+      res.json({
+        success: true,
+        fields: fieldResult.fields,
+        documentJS: jsResult.documentJS,
+        cleanedPdfBase64: cleanResult.cleanedPdfBase64,
+      });
+    } catch (err) {
+      console.error("Extract error:", err);
+      res
+        .status(500)
+        .json({ error: err.message || "Failed to extract fields" });
     }
-
-    const getCommand = new GetObjectCommand({ Bucket: BUCKET, Key: key });
-    const s3Response = await s3.send(getCommand);
-
-    const chunks = [];
-    for await (const chunk of s3Response.Body) {
-      chunks.push(chunk);
-    }
-    const pdfBuffer = Buffer.concat(chunks);
-
-    const sizeKB = (pdfBuffer.length / 1024).toFixed(1);
-    console.log(
-      `Extracting from s3://${BUCKET}/${key} (${sizeKB} KB) using 3 parallel workers`,
-    );
-
-    const taskData = { pdfBuffer };
-
-    const [fieldResult, jsResult, cleanResult] = await Promise.all([
-      fieldPool.runTask(taskData),
-      jsPool.runTask(taskData),
-      cleanPool.runTask(taskData),
-    ]);
-
-    console.log(`Extracted ${fieldResult.fields.length} fields from "${key}"`);
-
-    res.json({
-      success: true,
-      fields: fieldResult.fields,
-      documentJS: jsResult.documentJS,
-      cleanedPdfBase64: cleanResult.cleanedPdfBase64,
-    });
-  } catch (err) {
-    console.error("Extract error:", err);
-    res.status(500).json({ error: err.message || "Failed to extract fields" });
-  }
-});
+  },
+);
 
 app.use((err, _req, res, _next) => {
   if (err instanceof multer.MulterError) {

@@ -16,8 +16,8 @@ export const usePDFExtract = () => {
 
       const res = await fetch(`${API_BASE}/extract`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: file.s3Key }),
+        headers: { "Content-Type": "application/octet-stream" },
+        body: file.arrayBuffer,
       });
 
       if (!res.ok) {
@@ -32,7 +32,6 @@ export const usePDFExtract = () => {
       console.log("Extracted fields from backend:", data.fields.length);
       console.log("Document JS:", data.documentJS);
 
-      // Convert base64 cleaned PDF back to ArrayBuffer
       if (data.cleanedPdfBase64) {
         const binaryStr = atob(data.cleanedPdfBase64);
         const bytes = new Uint8Array(binaryStr.length);
