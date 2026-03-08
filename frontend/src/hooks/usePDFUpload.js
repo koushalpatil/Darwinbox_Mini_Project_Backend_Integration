@@ -7,6 +7,7 @@ export const usePDFUpload = ({ maxSizeMB }) => {
   const [error, setError] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStage, setUploadStage] = useState(null);
   const [s3Key, setS3Key] = useState(null);
 
   const validateFile = useCallback(
@@ -26,6 +27,7 @@ export const usePDFUpload = ({ maxSizeMB }) => {
     setIsProcessing(true);
     setError(null);
     setUploadProgress(0);
+    setUploadStage("uploading_to_s3");
 
     try {
       const formData = new FormData();
@@ -44,7 +46,7 @@ export const usePDFUpload = ({ maxSizeMB }) => {
       }
 
       const uploadData = await uploadRes.json();
-      setUploadProgress(50);
+      setUploadProgress(40);
 
       console.log("✅ PDF uploaded to S3:", uploadData.file);
 
@@ -53,15 +55,17 @@ export const usePDFUpload = ({ maxSizeMB }) => {
 
       setS3Key(key);
 
-      setUploadProgress(70);
+      setUploadStage("retrieving_from_s3");
+      setUploadProgress(50);
 
       const pdfRes = await fetch(presignedUrl);
       if (!pdfRes.ok) {
         throw new Error("Failed to download PDF from S3 for rendering");
       }
 
+      setUploadProgress(65);
       const arrayBuffer = await pdfRes.arrayBuffer();
-      setUploadProgress(100);
+      setUploadProgress(75);
 
       const fileData = {
         name,
@@ -73,11 +77,13 @@ export const usePDFUpload = ({ maxSizeMB }) => {
       };
 
       console.log("Loaded PDF into memory for rendering:", fileData);
+
+      setIsProcessing(false);
       setPdfFile(fileData);
     } catch (err) {
       console.error("Upload/fetch error:", err);
       setError(err.message);
-    } finally {
+      setUploadStage(null);
       setIsProcessing(false);
       setUploadProgress(0);
     }
@@ -100,6 +106,9 @@ export const usePDFUpload = ({ maxSizeMB }) => {
     error,
     isProcessing,
     uploadProgress,
+    setUploadProgress,
+    uploadStage,
+    setUploadStage,
     handleFile,
     s3Key,
   };

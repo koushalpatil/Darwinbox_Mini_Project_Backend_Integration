@@ -1,6 +1,6 @@
 import UploadZone from "./UploadZone";
 import { FilePreview } from "./FilePreview";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useMemo } from "react";
 import { usePDFUpload } from "../hooks/usePDFUpload";
 import { toast } from "react-toastify";
 import { usePDFExtract } from "../hooks/usePDFExtract";
@@ -16,10 +16,18 @@ export const PDFUploader = ({ maxSizeMB = 10 }) => {
     documentJS,
   } = usePDFExtract();
 
-  const { pdfFile, error, isProcessing, uploadProgress, handleFile } =
-    usePDFUpload({
-      maxSizeMB,
-    });
+  const {
+    pdfFile,
+    error,
+    isProcessing,
+    uploadProgress,
+    setUploadProgress,
+    uploadStage,
+    setUploadStage,
+    handleFile,
+  } = usePDFUpload({
+    maxSizeMB,
+  });
 
   useEffect(() => {
     if (error) {
@@ -28,25 +36,43 @@ export const PDFUploader = ({ maxSizeMB = 10 }) => {
   }, [error]);
 
   useEffect(() => {
-    if (pdfFile && !isExtracting) {
+    if (pdfFile && !isExtracting && !fields.length) {
       const extract = async () => {
         setIsExtracting(true);
+        setUploadStage("extracting_fields");
+        setUploadProgress(90);
+
         try {
-          await extractFields(pdfFile);
+          const minDisplayTime = new Promise((r) => setTimeout(r, 600));
+          await Promise.all([extractFields(pdfFile), minDisplayTime]);
         } catch (error) {
           console.log("Error in extracting fields : ", error);
         }
+
         setIsExtracting(false);
+        setUploadProgress(100);
+        setUploadStage("completed");
+
+        await new Promise((r) => setTimeout(r, 500));
+        setUploadStage("done");
       };
       extract();
     }
   }, [pdfFile]);
 
+  const currentStage = useMemo(() => {
+    if (uploadStage) return uploadStage;
+    return null;
+  }, [uploadStage]);
+
+  const pipelineComplete =
+    pdfFile && fields.length > 0 && cleanedPdfBuffer && currentStage === "done";
+
   return (
     <div
-      className={pdfFile ? "" : "w-full mx-auto max-w-2xl"}
+      className={pipelineComplete ? "" : "w-full mx-auto max-w-2xl"}
       style={
-        pdfFile
+        pipelineComplete
           ? {
               width: "100%",
               height: "100vh",
@@ -60,11 +86,10 @@ export const PDFUploader = ({ maxSizeMB = 10 }) => {
           : {}
       }
     >
-      {!pdfFile ? (
+      {!pipelineComplete ? (
         <UploadZone
           maxSizeMB={maxSizeMB}
-          isExtracting={isExtracting}
-          isProcessing={isProcessing}
+          currentStage={currentStage}
           uploadProgress={uploadProgress}
           onClick={() => inputRef.current.click()}
           onDrop={(e) => handleFile(e.dataTransfer.files[0])}

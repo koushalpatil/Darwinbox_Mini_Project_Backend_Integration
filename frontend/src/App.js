@@ -6,7 +6,7 @@ import "react-toastify/dist/ReactToastify.css";
 function App() {
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-      <PDFUploader maxSizeMB={5} />
+      <PDFUploader maxSizeMB={10} />
       <ToastContainer
         position="top-center"
         autoClose={4000}

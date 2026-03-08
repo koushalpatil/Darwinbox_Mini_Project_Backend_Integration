@@ -16,7 +16,6 @@ code {
     source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
 }
 
-
 :root {
   --highlight-bg-color: rgba(180, 0, 170, 1);
   --highlight-selected-bg-color: rgba(0, 100, 0, 1);
@@ -36,12 +35,12 @@ code {
   overflow: hidden;
   line-height: 1;
   -webkit-text-size-adjust: none;
-     -moz-text-size-adjust: none;
-          text-size-adjust: none;
+  -moz-text-size-adjust: none;
+  text-size-adjust: none;
   forced-color-adjust: none;
   transform-origin: 0 0;
   z-index: 2;
-  opacity: 1; 
+  opacity: 1;
   mix-blend-mode: multiply;
 }
 
@@ -52,7 +51,6 @@ code {
   cursor: text;
   transform-origin: 0% 0%;
 }
-
 
 .textLayer span.markedContent {
   top: 0;
@@ -94,7 +92,6 @@ code {
   background: rgba(0, 0, 255, 0.3);
 }
 
-
 .textLayer br::-moz-selection {
   background: transparent;
 }
@@ -109,14 +106,13 @@ code {
   z-index: -1;
   cursor: default;
   -webkit-user-select: none;
-     -moz-user-select: none;
-          user-select: none;
+  -moz-user-select: none;
+  user-select: none;
 }
 
 .textLayer .endOfContent.active {
   top: 0;
 }
-
 
 ::selection {
   background: rgba(0, 0, 255, 0.3);
