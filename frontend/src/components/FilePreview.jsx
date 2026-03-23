@@ -133,18 +133,51 @@ export const FilePreview = ({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [handleZoomIn, handleZoomOut, handleResetZoom]);
 
-  const handleDownload = useCallback(() => {
+  const handleDownload = useCallback(async () => {
     if (!pdfFile?.arrayBuffer) return;
-    const blob = new Blob([pdfFile.arrayBuffer], { type: "application/pdf" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = pdfFile.name || "document.pdf";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, [pdfFile]);
+
+    try {
+      const uint8 = new Uint8Array(pdfFile.arrayBuffer);
+      let binary = "";
+      for (let i = 0; i < uint8.length; i++) {
+        binary += String.fromCharCode(uint8[i]);
+      }
+      const pdfBase64 = btoa(binary);
+
+      const cleanFormData = {};
+      for (const [key, value] of Object.entries(formData)) {
+        if (!key.includes("-page-")) {
+          cleanFormData[key] = value;
+        }
+      }
+
+      const response = await fetch("http://localhost:5000/api/pdf/fill", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pdfBase64,
+          formData: cleanFormData,
+          fileName: pdfFile.name || "document.pdf",
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = pdfFile.name || "document.pdf";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Download with filled values failed:", err);
+    }
+  }, [pdfFile, formData]);
 
   const handlePrint = useCallback(() => {
     if (!pdfFile?.arrayBuffer) return;
